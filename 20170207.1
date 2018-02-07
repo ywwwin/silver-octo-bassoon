@@ -1,0 +1,46 @@
+ReadPubMed <- function (query, database = "PubMed", ...) 
+{
+  .params <- list(...)
+  bad.ind <- which(!names(.params) %in% c("usehistory", "WebEnv", 
+                                          "query_key", "retstart", "retmax", "field", "datetype", 
+                                          "reldate", "mindate", "maxdate"))
+  .parms <- .params
+  if (length(bad.ind)) {
+    warning("Invalid .params specified and will be ignored")
+    .parms <- .parms[-bad.ind]
+  }
+  base.url <- "https://eutils.ncbi.nlm.nih.gov/entrez/eutils/einfo.fcgi"
+  stopifnot(!missing(query))
+  .parms$term <- query
+  .parms$db <- database
+  .parms$usehistory = "y"
+  results <- try(getForm(base.url, .params = .parms))
+  if (inherits(results, "try-error")) 
+    return(NA)
+  tdoc <- xmlParse(results)
+  webenv <- unlist(xpathApply(tdoc, "/eSearchResult/WebEnv", 
+                              xmlValue))
+  query.key <- unlist(xpathApply(tdoc, "/eSearchResult/QueryKey", 
+                                 xmlValue))
+  ids <- unlist(xpathApply(tdoc, "/eSearchResult/IdList/Id", 
+                           xmlValue))
+  if (!length(ids)) {
+    message("No Results.")
+    return()
+  }
+  res <- GetPubMedByID(id = ids, db = database, WebEnv = webenv, 
+                       query_key = query.key)
+  res$language <- NULL
+  #res$language <- paste(res$language, sep=" ")
+  #res$language <- gsub(res$language,pattern="c\\(",replacement="")
+  #res$language <- gsub(res$language,pattern="\\\"",replacement="")
+  #res$language <- gsub(res$language,pattern="\\)",replacement="")
+  res$doi <- NULL
+  #res$doi <- paste(res$doi, sep="_")
+  #res$doi <- gsub(res$doi,pattern="c\\(",replacement="")
+  #res$doi <- gsub(res$doi,pattern="\\\"",replacement="")
+  #res$doi <- gsub(res$doi,pattern="\\)",replacement="")
+  return(res)
+}
+
+# message(ReadPubMed function modified successfully)
